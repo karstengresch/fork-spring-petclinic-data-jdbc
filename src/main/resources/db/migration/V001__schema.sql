@@ -1,55 +1,80 @@
-CREATE TABLE IF NOT EXISTS vet (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  first_name VARCHAR(30),
-  last_name VARCHAR(30),
-  INDEX(last_name)
-) engine=InnoDB;
+--Michael Ashby, added to create tables for SQL Database.
+declare @sql nvarchar(2000)
+while(exists(select 1 from INFORMATION_SCHEMA.TABLE_CONSTRAINTS where CONSTRAINT_TYPE='FOREIGN KEY'))
+begin
 
-CREATE TABLE IF NOT EXISTS specialty (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(80),
-  INDEX(name)
-) engine=InnoDB;
+ SELECT TOP 1 @sql=('ALTER TABLE ' + TABLE_SCHEMA + '.[' + TABLE_NAME
+ + '] DROP CONSTRAINT [' + CONSTRAINT_NAME + ']')
+ FROM information_schema.table_constraints
+ WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
+exec (@sql)
+ PRINT @sql
+end
+while(exists(select 1 from INFORMATION_SCHEMA.TABLES))
+begin
 
-CREATE TABLE IF NOT EXISTS vet_specialty (
-  vet INT(4) UNSIGNED NOT NULL,
-  specialty INT(4) UNSIGNED NOT NULL,
-  FOREIGN KEY (vet) REFERENCES vet(id),
-  FOREIGN KEY (specialty) REFERENCES specialty(id),
-  UNIQUE (vet,specialty)
-) engine=InnoDB;
+ SELECT TOP 1 @sql=('DROP TABLE ' + TABLE_SCHEMA + '.[' + TABLE_NAME
+ + ']')
+ FROM INFORMATION_SCHEMA.TABLES
+exec (@sql)
+PRINT @sql
+end
 
-CREATE TABLE IF NOT EXISTS pet_type (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(80),
-  INDEX(name)
-) engine=InnoDB;
 
-CREATE TABLE IF NOT EXISTS owner (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  first_name VARCHAR(30),
-  last_name VARCHAR(30),
-  address VARCHAR(255),
-  city VARCHAR(80),
-  telephone VARCHAR(20),
-  INDEX(last_name)
-) engine=InnoDB;
+	CREATE TABLE vets (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		first_name VARCHAR(30),
+		last_name VARCHAR(30)
+	);
+	CREATE INDEX vets_last_name ON vets(last_name);
 
-CREATE TABLE IF NOT EXISTS pet (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(30),
-  birth_date DATE,
-  type_id INT(4) UNSIGNED NOT NULL,
-  owner_id INT(4) UNSIGNED NOT NULL,
-  INDEX(name),
-  FOREIGN KEY (owner_id) REFERENCES owner(id),
-  FOREIGN KEY (type_id) REFERENCES pet_type(id)
-) engine=InnoDB;
+	CREATE TABLE specialties (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		name VARCHAR(80)
+	);
+	CREATE INDEX specialties_name ON specialties(name);
 
-CREATE TABLE IF NOT EXISTS visit (
-  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  pet_id INT(4) UNSIGNED NOT NULL,
-  date DATE,
-  description VARCHAR(255),
-  FOREIGN KEY (pet_id) REFERENCES pet(id)
-) engine=InnoDB;
+	CREATE TABLE vet_specialties (
+		vet_id INTEGER NOT NULL  ,
+		specialty_id INTEGER NOT NULL
+	);
+	CREATE CLUSTERED INDEX vet_specialties_PK ON vet_specialties(vet_id, specialty_id);
+
+	alter table vet_specialties add constraint fk_vet_specialties_vets foreign key (vet_id) references vets(id);
+	alter table vet_specialties add constraint fk_vet_specialties_specialties foreign key (specialty_id) references specialties(id);
+
+	CREATE TABLE types (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		name VARCHAR(80)
+	);
+	CREATE INDEX types_name ON types(name);
+
+	CREATE TABLE owners (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		first_name VARCHAR(30),
+		last_name VARCHAR(30),
+		address VARCHAR(255),
+		city VARCHAR(80),
+		telephone VARCHAR(20)
+	);
+	CREATE INDEX owners_last_name ON owners(last_name);
+
+	CREATE TABLE pets (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		name VARCHAR(30),
+		birth_date DATE,
+		type_id INTEGER NOT NULL,
+		owner_id INTEGER NOT NULL
+	);
+	alter table pets add constraint fk_pets_owners foreign key (owner_id) references owners(id);
+	alter table pets add constraint fk_pets_types foreign key (type_id) references types(id);
+	CREATE INDEX pets_name ON pets(name);
+
+	CREATE TABLE visits (
+		id INTEGER NOT NULL IDENTITY PRIMARY KEY,
+		pet_id INTEGER NOT NULL,
+		visit_date DATE,
+		description VARCHAR(255)
+	);
+	alter table visits add constraint fk_visits_pets foreign key (pet_id) references pets(id);
+	CREATE INDEX visits_pet_id ON visits(pet_id);
